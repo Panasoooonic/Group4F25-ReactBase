@@ -11,30 +11,24 @@ import {
 
 const MOCK_VEHICLES: Vehicle[] = [
   {
-    id: "v-1",
+    vehicleId: "v-1",
     model: "Toyota Corolla SE",
-    label: "Toyota Corolla SE",
     year: 2020,
     plateNo: "ABC-123",
-    licenseNo: "ON-1234567",
     numberOfTrips: 18,
   },
   {
-    id: "v-2",
+    vehicleId: "v-2",
     model: "Honda Civic Sport",
-    label: "Honda Civic Sport",
     year: 2022,
     plateNo: "CIV-987",
-    licenseNo: "ON-5432109",
     numberOfTrips: 7,
   },
   {
-    id: "v-3",
+    vehicleId: "v-3",
     model: "Ford F-150 XLT",
-    label: "Ford F-150 XLT",
     year: 2019,
     plateNo: "TRK-555",
-    licenseNo: "ON-7773331",
     numberOfTrips: 25,
   },
 ];
@@ -42,7 +36,7 @@ const MOCK_VEHICLES: Vehicle[] = [
 export default function Dashboard() {
   const [isTracking, setIsTracking] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>(
-    MOCK_VEHICLES[0]?.id ?? ""
+    MOCK_VEHICLES[0]?.vehicleId ?? ""
   );
 
   // Placeholder telemetry values for now.
@@ -56,7 +50,7 @@ export default function Dashboard() {
     setIsTracking((prev) => !prev);
   };
 
-  const selectedVehicle = MOCK_VEHICLES.find((v) => v.id === selectedVehicleId);
+  const selectedVehicle = MOCK_VEHICLES.find((v) => v.vehicleId === selectedVehicleId);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -78,9 +72,9 @@ export default function Dashboard() {
             >
               {MOCK_VEHICLES.map((vehicle) => (
                 <Picker.Item
-                  key={vehicle.id}
+                  key={vehicle.vehicleId}
                   label={vehicle.model}
-                  value={vehicle.id}
+                  value={vehicle.vehicleId}
                 />
               ))}
             </Picker>
