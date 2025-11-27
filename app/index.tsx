@@ -8,18 +8,17 @@ import {
   View,
 } from "react-native";
 
+import { LoginSuccessResponse, storeUser } from "@/models/user";
 import { Link, useRouter } from "expo-router";
 
 export default function LoginScreen() {
   const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const loginOnPress = async () => {
-    // Clear any previous error
     setErrorMessage(null);
     setIsLoading(true);
 
@@ -36,26 +35,21 @@ export default function LoginScreen() {
       });
 
       if (response.ok) {
-        // (Optional) read body if you need token/user info
-        // const data = await response.json();
+        const data: LoginSuccessResponse = await response.json();
+
+        await storeUser(data.result);
 
         router.replace("/(tabs)/dashboard");
       } else {
-        // Non-200 response → show error notification
         let serverMessage = "Login failed. Please check your credentials.";
-
         try {
           const errorBody = await response.json();
           if (errorBody?.message) {
             serverMessage = errorBody.message;
           }
-        } catch {
-          // ignore JSON parse errors and use default message
-        }
+        } catch {}
 
         setErrorMessage(serverMessage);
-
-        // Hide notification after 5 seconds
         setTimeout(() => {
           setErrorMessage(null);
         }, 5000);
