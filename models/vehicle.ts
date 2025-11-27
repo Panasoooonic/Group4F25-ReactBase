@@ -1,6 +1,9 @@
 export interface Vehicle {
-  id: string; // Unique ID for the vehicle
-  model: string; // Car model (e.g., Honda Civic)
-  licenseNo?: string; // License number registered to the driver
-  plateNo?: string; // Plate number on the vehicle
+  id: string; // maps to vehicle_id
+  model: string; // e.g. "Toyota Corolla"
+  label?: string;
+  year?: number; // e.g. 2020
+  plateNo: string; // license plate on car
+  licenseNo: string; // internal / registration ID
+  numberOfTrips?: number;
 }

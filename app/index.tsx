@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Image,
   StyleSheet,
@@ -8,18 +8,73 @@ import {
   View,
 } from "react-native";
 
-import { useNavigation } from "@react-navigation/native";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 
 export default function LoginScreen() {
-  const navigation = useNavigation();
+  const router = useRouter();
 
-  const loginOnPress = () => {
-    navigation.navigate("Dashboard" as never);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const loginOnPress = async () => {
+    // Clear any previous error
+    setErrorMessage(null);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("http://localhost:3000/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
+
+      if (response.ok) {
+        // (Optional) read body if you need token/user info
+        // const data = await response.json();
+
+        router.replace("/(tabs)/dashboard");
+      } else {
+        // Non-200 response → show error notification
+        let serverMessage = "Login failed. Please check your credentials.";
+
+        try {
+          const errorBody = await response.json();
+          if (errorBody?.message) {
+            serverMessage = errorBody.message;
+          }
+        } catch {
+          // ignore JSON parse errors and use default message
+        }
+
+        setErrorMessage(serverMessage);
+
+        // Hide notification after 5 seconds
+        setTimeout(() => {
+          setErrorMessage(null);
+        }, 5000);
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setErrorMessage("Unable to reach server. Please try again.");
+
+      setTimeout(() => {
+        setErrorMessage(null);
+      }, 5000);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <View style={styles.container}>
+      {/* Email input */}
       <View style={styles.inputContainer}>
         <Image
           style={[styles.icon, styles.inputIcon]}
@@ -31,10 +86,14 @@ export default function LoginScreen() {
           style={styles.inputs}
           placeholder="Email"
           keyboardType="email-address"
+          autoCapitalize="none"
           underlineColorAndroid="transparent"
+          value={email}
+          onChangeText={setEmail}
         />
       </View>
 
+      {/* Password input */}
       <View style={styles.inputContainer}>
         <Image
           style={[styles.icon, styles.inputIcon]}
@@ -43,24 +102,35 @@ export default function LoginScreen() {
         <TextInput
           style={styles.inputs}
           placeholder="Password"
-          secureTextEntry={true}
+          secureTextEntry
           underlineColorAndroid="transparent"
+          value={password}
+          onChangeText={setPassword}
         />
       </View>
 
-      {/* <TouchableOpacity style={styles.restoreButtonContainer}>
-        <Text>Forgot?</Text>
-      </TouchableOpacity> */}
+      {/* Login button */}
+      <TouchableOpacity
+        style={[styles.buttonContainer, styles.loginButton]}
+        onPress={loginOnPress}
+        disabled={isLoading}
+      >
+        <Text style={styles.loginText}>
+          {isLoading ? "Logging in..." : "Login"}
+        </Text>
+      </TouchableOpacity>
 
-      <Link href="/dashboard">
-        <TouchableOpacity style={[styles.buttonContainer, styles.loginButton]}>
-          <Text style={styles.loginText}>Login</Text>
-        </TouchableOpacity>
-      </Link>
-
+      {/* Register link */}
       <Link href="/signup" style={styles.buttonContainer}>
         <Text>Register</Text>
       </Link>
+
+      {/* Error toast */}
+      {errorMessage && (
+        <View style={styles.errorToast}>
+          <Text style={styles.errorToastText}>{errorMessage}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -110,27 +180,22 @@ const styles = StyleSheet.create({
   loginButton: {
     backgroundColor: "#3498db",
   },
-  fabookButton: {
-    backgroundColor: "#3b5998",
-  },
-  googleButton: {
-    backgroundColor: "#ff0000",
-  },
   loginText: {
     color: "white",
   },
-  restoreButtonContainer: {
-    width: 250,
-    marginBottom: 15,
-    alignItems: "flex-end",
+  errorToast: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    bottom: 24,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: "rgba(239, 68, 68, 0.95)",
+    borderRadius: 8,
   },
-  socialButtonContent: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  socialIcon: {
-    color: "#FFFFFF",
-    marginRight: 5,
+  errorToastText: {
+    color: "#fff",
+    fontSize: 14,
+    textAlign: "center",
   },
 });

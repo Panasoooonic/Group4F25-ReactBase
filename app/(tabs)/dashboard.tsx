@@ -9,11 +9,34 @@ import {
   View,
 } from "react-native";
 
-
 const MOCK_VEHICLES: Vehicle[] = [
-  { id: "car-1", model: "Toyota Corolla" },
-  { id: "car-2", model: "Honda Civic" },
-  { id: "car-3", model: "Ford F-150" },
+  {
+    id: "v-1",
+    model: "Toyota Corolla SE",
+    label: "Toyota Corolla SE",
+    year: 2020,
+    plateNo: "ABC-123",
+    licenseNo: "ON-1234567",
+    numberOfTrips: 18,
+  },
+  {
+    id: "v-2",
+    model: "Honda Civic Sport",
+    label: "Honda Civic Sport",
+    year: 2022,
+    plateNo: "CIV-987",
+    licenseNo: "ON-5432109",
+    numberOfTrips: 7,
+  },
+  {
+    id: "v-3",
+    model: "Ford F-150 XLT",
+    label: "Ford F-150 XLT",
+    year: 2019,
+    plateNo: "TRK-555",
+    licenseNo: "ON-7773331",
+    numberOfTrips: 25,
+  },
 ];
 
 export default function Dashboard() {
