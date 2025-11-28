@@ -1,205 +1,280 @@
-import React, { useState } from 'react';
+import { Trip } from "@/models/trip";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ScrollView, TouchableOpacity, View } from "react-native";
+export default function TripRecordScreen() {
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [expandedTripId, setExpandedTripId] = useState<number | string | null>(
+    null
+  );
+  const [refreshing, setRefreshing] = useState(false);
 
+  // Helper: Format Date
+  const formatDate = (dateString: Date | string) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
+  // Helper: Format Duration (seconds to min:sec)
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}m ${secs}s`;
+  };
 
-import { Trip } from '@/models/trip';
-import { StyleSheet } from "react-native";
-import { Text } from "react-native-paper";
+  const fetchTrips = async () => {
+    setIsLoading(true);
+    try {
+      // 1. Get User ID
+      const jsonValue = await AsyncStorage.getItem("user");
+      const user = jsonValue != null ? JSON.parse(jsonValue) : null;
 
-const SettingScreen = () => {
-  const [open, setOpen] = useState(false);
+      if (user && user.id) {
+        // 2. Call API
+        const response = await fetch(
+          `http://localhost:3000/api/summary/user/${user.id}`
+        );
 
-   const tripList: Trip[] = [
-    {
-      tripId: 1,
-      vehicleId: 1,
-      averageSpeedKph: 50,
-      distanceKm: 100,
-      duration: 5000,
-      startTs: new Date(),
-      endTs: new Date(),
-      totalScore: 100,
-      status: "Driving",
-    },
-  ];
+        if (response.ok) {
+          const data = await response.json();
+          // Handle case where API returns array directly or inside { result: [] }
+          const tripList = Array.isArray(data) ? data : data.result || [];
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Header */}
-      <Text style={styles.header}>Trip Record</Text>
+          // Optional: Sort by newest first
+          // tripList.sort((a: Trip, b: Trip) => new Date(b.startTs).getTime() - new Date(a.startTs).getTime());
 
-      {/* Section 1 */}
-      <TouchableOpacity>
-        <View style={styles.section}>
-          <View style={styles.sectionRow}>
-            {tripList.map((trip) => (
-                <>
-                  <Text style={styles.sectionTitle}>{`Trip #${trip.tripId}`}</Text>
-                  <View style={styles.section}>
-                    <Text style={styles.sectionDate}>{trip.startTs.toLocaleString()}-</Text>
-                    <Text style={styles.sectionDate}>{trip.endTs.toLocaleString()}</Text>
-                  </View>
-                </>    
-              ))}
+          setTrips(tripList);
+        } else {
+          console.error("Failed to fetch trips");
+        }
+      }
+    } catch (error) {
+      console.error("Error loading trips:", error);
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTrips();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchTrips();
+  };
+
+  const toggleExpand = (id: number | string) => {
+    // If clicking the same ID, close it (null). Otherwise, set it as active.
+    setExpandedTripId((prev) => (prev === id ? null : id));
+  };
+
+  const renderTripItem = ({ item }: { item: Trip }) => {
+    const isExpanded = expandedTripId === item.tripId;
+
+    return (
+      <View style={styles.cardContainer}>
+        {/* Header (Always Visible) */}
+        <TouchableOpacity
+          style={styles.cardHeader}
+          onPress={() => toggleExpand(item.tripId)}
+          activeOpacity={0.7}
+        >
+          <View>
+            <Text style={styles.tripTitle}>Trip #{item.tripId}</Text>
+            <Text style={styles.tripDate}>{formatDate(item.startTs)}</Text>
           </View>
+          <View style={styles.scoreBadge}>
+            <Text style={styles.scoreLabel}>Score</Text>
+            <Text style={styles.scoreValue}>{item.totalScore}</Text>
+          </View>
+        </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.header2}
-            onPress={() => setOpen(!open)}
-          >
-            <Text style={[styles.headerText, open && { opacity: 0.3 }]}>
-              Trip details
-            </Text>
-            <Text style={styles.arrow}>{open ? "▲" : "▼"}</Text>
-          </TouchableOpacity>
-        </View>
-       {open && (
-        <View style={styles.content2}>
-
-            {tripList.map((trip) => (
-              <View style={styles.section2}>
-                <>
-                  <Text style={styles.scoreText}>Total Score: {trip.totalScore}</Text>
-                  
-                  <Text style={styles.section}>Duration: {trip.duration} sec</Text>
-                  <Text style={styles.section}>Avg Speed: {trip.averageSpeedKph} kph</Text> 
-                  <Text style={styles.section}>Distance Traveled: {trip.distanceKm} Km</Text> 
-                </> 
-              </View> 
-            ))}
+        {/* Details (Visible on Expand) */}
+        {isExpanded && (
+          <View style={styles.cardDetails}>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Duration:</Text>
+              <Text style={styles.detailValue}>
+                {formatDuration(item.duration)}
+              </Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Distance:</Text>
+              <Text style={styles.detailValue}>{item.distanceKm} km</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Avg Speed:</Text>
+              <Text style={styles.detailValue}>
+                {item.averageSpeedKph} km/h
+              </Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Status:</Text>
+              <Text style={styles.detailValue}>{item.status}</Text>
+            </View>
+            <View style={styles.timeRow}>
+              <Text style={styles.timeText}>
+                Start: {formatDate(item.startTs)}
+              </Text>
+              <Text style={styles.timeText}>End: {formatDate(item.endTs)}</Text>
+            </View>
           </View>
         )}
-{/*
-  <SafeAreaProvider>
-      <ThemedText type="title">Trip Records</ThemedText>
+      </View>
+    );
+  };
 
-      {tripList.map((trip) => (
-        <SafeAreaView>
-          <Card>
-            <Card.Title
-              title={Trip #${trip.tripId}}
-              subtitle={Distance: ${trip.distanceKm}km}
-            />
+  return (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.header}>Trip Record</Text>
 
-            <Card.Content>
-              <Text variant="bodyMedium">{Duration: ${trip.duration}}</Text>
-              <Text variant="bodyMedium">{Start at: ${moment(
-                trip.startTs
-              ).format("YYYY-MM-DD HH:mm")}}</Text>
-              <Text variant="bodyMedium">{End at: ${moment(
-                trip.startTs
-              ).format("YYYY-MM-DD HH:mm")}}</Text>
-              <Text variant="bodyMedium">{Average speed: ${trip.averageSpeedKph}kph}</Text>
-              <Text variant="bodyMedium">{Total score: ${trip.totalScore}}</Text>
-            </Card.Content>
-            {/* <Card.Cover source={{ uri: "https://picsum.photos/700" }} /> /}
-            {/ <Card.Actions>
-              <Button>Cancel</Button>
-              <Button>Ok</Button>
-            </Card.Actions> 
-          </Card>
-        </SafeAreaView>
-      ))}
-    </SafeAreaProvider>
-*/}
-
-
-
-      </TouchableOpacity>
-     
-   </ScrollView>
+      {isLoading && !refreshing ? (
+        <ActivityIndicator
+          size="large"
+          color="#2563eb"
+          style={{ marginTop: 20 }}
+        />
+      ) : trips.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>No trip history found.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={trips}
+          keyExtractor={(item) => String(item.tripId)}
+          renderItem={renderTripItem}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        />
+      )}
+    </SafeAreaView>
   );
-};
-
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F7F7F7",
+    paddingHorizontal: 20,
   },
-
- header: {
+  header: {
     fontSize: 32,
     fontWeight: "bold",
     marginBottom: 20,
+    marginTop: 10,
+    color: "#111827",
   },
-
-  header2: {
-    padding: 15,
+  listContent: {
+    paddingBottom: 20,
+  },
+  cardContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: "hidden",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#eee",
-  },
-  section: {
-    padding: 5,
+    padding: 16,
     backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingHorizontal: 15,
   },
-  section2: {
-    padding: 15,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingHorizontal: 15,
+  tripTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
   },
-  sectionRow: {
-    flexDirection: "row",
-    justifyContent: 'space-between',
-    padding: 10,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-  },
-
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 10,
-    opacity: 0.7,
-  },
-
-  sectionDate: {
-    fontSize: 13,
-    fontWeight: "600",
-    opacity: 0.4,
-  },
-
-  headerText: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  arrow: {
-    fontSize: 16,
-    opacity: 0.6,
-  },
-  content: {
-    padding: 15,
-    backgroundColor: "#fafafa",
-  },
-
-  content2: {
-    padding: 5,
-    backgroundColor: "#fafafa",
-  },
-
-  infoText: {
+  tripDate: {
     fontSize: 14,
-    lineHeight: 20,
-    opacity: 0.8,
+    color: "#6b7280",
+    marginTop: 4,
   },
-
-  scoreText: {
-    paddingBottom: 5,
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 10,
-  }
+  scoreBadge: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#eff6ff",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  scoreLabel: {
+    fontSize: 10,
+    color: "#2563eb",
+    textTransform: "uppercase",
+    fontWeight: "700",
+  },
+  scoreValue: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#2563eb",
+  },
+  cardDetails: {
+    backgroundColor: "#f9fafb",
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#f3f4f6",
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: "#6b7280",
+  },
+  detailValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+  },
+  timeRow: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+  },
+  timeText: {
+    fontSize: 12,
+    color: "#9ca3af",
+    fontStyle: "italic",
+    marginBottom: 2,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 50,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#6b7280",
+  },
 });
-
-
-
-export default SettingScreen;
