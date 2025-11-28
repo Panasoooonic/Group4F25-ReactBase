@@ -1,7 +1,9 @@
 // app/(tabs)/vehicle.tsx
+import { API_URL } from "@/constants/api";
 import { getUser } from "@/models/user";
 import { Vehicle } from "@/models/vehicle";
-import React, { useEffect, useState } from "react";
+import { useFocusEffect } from "expo-router"; // 1. Import useFocusEffect
+import React, { useCallback, useState } from "react"; // 2. Import useCallback
 import {
   ActivityIndicator,
   Alert,
@@ -39,33 +41,45 @@ export default function VehicleScreen() {
     ...emptyForm,
   });
 
-  // 1. Fetch User and Vehicles on Load
-  useEffect(() => {
-    const initData = async () => {
-      setIsLoading(true);
-      const user = await getUser();
-      if (user && user.userId) {
-        setCurrentUserId(user.userId);
-        await fetchVehicles(user.userId);
-      } else {
-        Alert.alert("Error", "User not found. Please log in.");
-      }
-      setIsLoading(false);
-    };
-    initData();
-  }, []);
+  // 1. Fetch User and Vehicles on Screen Focus (Replaces useEffect)
+  useFocusEffect(
+    useCallback(() => {
+      const initData = async () => {
+        // Only show loading indicator if the list is empty to prevent flickering on every tab switch
+        if (vehicles.length === 0) setIsLoading(true);
+
+        try {
+          const user = await getUser();
+          if (user && user.userId) {
+            setCurrentUserId(user.userId);
+            await fetchVehicles(user.userId);
+          } else {
+            // Optional: Handle case where user is logged out but on this screen
+            // Alert.alert("Error", "User not found. Please log in.");
+          }
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      initData();
+    }, []) // Empty dependency array ensures this callback is stable
+  );
 
   // API: Get Vehicles
   const fetchVehicles = async (userId: string | number) => {
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/vehicle/${userId}`
-      );
+      const response = await fetch(`${API_URL}/vehicle/${userId}`);
       if (response.ok) {
         const data = await response.json();
-        // Assuming the API returns the list directly or inside a property
-        // Adjust 'data' or 'data.result' based on your exact server response structure
-        setVehicles(Array.isArray(data.vehicles) ? data.vehicles : []);
+        // Handle data structure (array vs object with vehicles key)
+        const list = Array.isArray(data)
+          ? data
+          : data.vehicles || data.result || [];
+
+        setVehicles(list);
       } else {
         console.error("Failed to fetch vehicles");
       }
@@ -90,11 +104,11 @@ export default function VehicleScreen() {
   const openEditModal = (vehicle: Vehicle) => {
     setMode("edit");
     setForm({
-      id: String(vehicle.vehicleId),
+      id: String(vehicle.vehicleId), // Ensure using correct ID field from model
       model: vehicle.model,
       year: String(vehicle.year),
       plateNo: vehicle.plateNo,
-      make: String(vehicle.make), // Ensure make exists in your Vehicle model
+      make: String(vehicle.make),
     });
     setModalVisible(true);
   };
@@ -116,7 +130,7 @@ export default function VehicleScreen() {
     try {
       if (mode === "create") {
         // --- CREATE ---
-        const response = await fetch("http://localhost:3000/api/vehicle/add", {
+        const response = await fetch(`${API_URL}/vehicle/add`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -137,19 +151,16 @@ export default function VehicleScreen() {
         }
       } else {
         // --- UPDATE ---
-        const response = await fetch(
-          `http://localhost:3000/api/vehicle/update/${form.id}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              make: form.make,
-              model: form.model,
-              year: Number(form.year),
-              plateNo: form.plateNo,
-            }),
-          }
-        );
+        const response = await fetch(`${API_URL}/vehicle/update/${form.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            make: form.make,
+            model: form.model,
+            year: Number(form.year),
+            plateNo: form.plateNo,
+          }),
+        });
 
         if (response.ok) {
           Alert.alert("Success", "Vehicle updated successfully");
@@ -169,7 +180,6 @@ export default function VehicleScreen() {
 
   // API: Delete
   const handleDelete = async () => {
-    // console.log(form.id, currentUserId)
     if (!form.id || !currentUserId) return;
 
     Alert.alert(
@@ -184,7 +194,7 @@ export default function VehicleScreen() {
             setIsLoading(true);
             try {
               const response = await fetch(
-                `http://localhost:3000/api/vehicle/delete/${form.id}`,
+                `${API_URL}/vehicle/delete/${form.id}`,
                 {
                   method: "DELETE",
                 }
@@ -255,7 +265,7 @@ export default function VehicleScreen() {
         </View>
 
         {/* Loading State or List */}
-        {isLoading && !modalVisible ? (
+        {isLoading && !modalVisible && vehicles.length === 0 ? (
           <View style={styles.emptyState}>
             <ActivityIndicator size="large" color="#2563eb" />
           </View>

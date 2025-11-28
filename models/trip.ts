@@ -5,8 +5,8 @@ export interface Trip {
   startTs: Date;
   endTs: Date;
   distanceKm: number;
-  duration: number;
+  durationSec: number;
   averageSpeedKph: number;
-  totalScore: number;
+  scoreTotal?: number;
   status: string;
 }

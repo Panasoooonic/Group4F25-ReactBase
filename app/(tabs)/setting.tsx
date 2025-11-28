@@ -1,3 +1,4 @@
+import { API_URL } from "@/constants/api";
 import { getUser } from "@/models/user";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -90,7 +91,7 @@ export default function SettingScreen() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:3000/api/updatepassword", {
+      const response = await fetch(API_URL + "/updatepassword", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

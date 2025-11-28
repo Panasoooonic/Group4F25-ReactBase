@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 
+import { API_URL } from "@/constants/api";
 import { LoginSuccessResponse, storeUser } from "@/models/user";
 import { Link, useRouter } from "expo-router";
 
@@ -23,7 +24,7 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:3000/api/login", {
+      const response = await fetch(API_URL + "/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

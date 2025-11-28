@@ -1,6 +1,8 @@
+import { API_URL } from "@/constants/api";
 import { Trip } from "@/models/trip";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { useEffect, useState } from "react";
+import { getUser } from "@/models/user";
+import { useFocusEffect } from "expo-router"; // 1. Added import
+import React, { useCallback, useState } from "react"; // 2. Added useCallback, removed useEffect
 import {
   ActivityIndicator,
   FlatList,
@@ -40,25 +42,28 @@ export default function TripRecordScreen() {
   };
 
   const fetchTrips = async () => {
-    setIsLoading(true);
+    // Only show full loading spinner if list is empty (first load)
+    if (trips.length === 0) setIsLoading(true);
+
     try {
       // 1. Get User ID
-      const jsonValue = await AsyncStorage.getItem("user");
-      const user = jsonValue != null ? JSON.parse(jsonValue) : null;
+      const user = await getUser();
 
-      if (user && user.id) {
+      if (user && user?.userId) {
+        // Ensure using user.id or user.userId consistently
         // 2. Call API
-        const response = await fetch(
-          `http://localhost:3000/api/summary/user/${user.id}`
-        );
+        // Note: Check if your user object uses 'id' or 'userId' based on previous files
+        const response = await fetch(`${API_URL}/summary/user/${user.userId}`);
 
         if (response.ok) {
           const data = await response.json();
           // Handle case where API returns array directly or inside { result: [] }
           const tripList = Array.isArray(data) ? data : data.result || [];
 
-          // Optional: Sort by newest first
-          // tripList.sort((a: Trip, b: Trip) => new Date(b.startTs).getTime() - new Date(a.startTs).getTime());
+          // Optional: Sort by newest first (assuming tripId increments with time)
+          tripList.sort(
+            (a: Trip, b: Trip) => Number(b.tripId) - Number(a.tripId)
+          );
 
           setTrips(tripList);
         } else {
@@ -73,9 +78,12 @@ export default function TripRecordScreen() {
     }
   };
 
-  useEffect(() => {
-    fetchTrips();
-  }, []);
+  // 3. Replaced useEffect with useFocusEffect
+  useFocusEffect(
+    useCallback(() => {
+      fetchTrips();
+    }, [])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -104,7 +112,7 @@ export default function TripRecordScreen() {
           </View>
           <View style={styles.scoreBadge}>
             <Text style={styles.scoreLabel}>Score</Text>
-            <Text style={styles.scoreValue}>{item.totalScore}</Text>
+            <Text style={styles.scoreValue}>{item.scoreTotal}</Text>
           </View>
         </TouchableOpacity>
 
@@ -114,22 +122,26 @@ export default function TripRecordScreen() {
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Duration:</Text>
               <Text style={styles.detailValue}>
-                {formatDuration(item.duration)}
+                {formatDuration(item.durationSec || 0)}
               </Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Distance:</Text>
-              <Text style={styles.detailValue}>{item.distanceKm} km</Text>
+              <Text style={styles.detailValue}>
+                {item.distanceKm?.toFixed(2)} km
+              </Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Avg Speed:</Text>
               <Text style={styles.detailValue}>
-                {item.averageSpeedKph} km/h
+                {item.averageSpeedKph?.toFixed(1)} km/h
               </Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Status:</Text>
-              <Text style={styles.detailValue}>{item.status}</Text>
+              <Text style={styles.detailValue}>
+                {item.status || "Completed"}
+              </Text>
             </View>
             <View style={styles.timeRow}>
               <Text style={styles.timeText}>
@@ -147,7 +159,7 @@ export default function TripRecordScreen() {
     <SafeAreaView style={styles.container}>
       <Text style={styles.header}>Trip Record</Text>
 
-      {isLoading && !refreshing ? (
+      {isLoading && !refreshing && trips.length === 0 ? (
         <ActivityIndicator
           size="large"
           color="#2563eb"

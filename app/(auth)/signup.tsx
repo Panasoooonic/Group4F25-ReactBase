@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 
+import { API_URL } from "@/constants/api";
 import { useRouter } from "expo-router";
 
 export default function SignUpScreen() {
@@ -27,7 +28,7 @@ export default function SignUpScreen() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:3000/api/register", {
+      const response = await fetch(API_URL + "/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
