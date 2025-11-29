@@ -10,11 +10,45 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Remember to start server before testing Front-end 
+
+   ```bash
+   npm run dev
+   ```
+
+3. Set up Server URL:
+   Step 1: Find your Computer's IP Address 
+   On Windows:
+      - Open Command Prompt (cmd).
+      - Type ipconfig and press Enter.
+      - Look for IPv4 Address. It usually looks like 192.168.1.5 or 192.168.0.12.
+
+   On Mac:
+      - Open Terminal.
+      - Type ipconfig getifaddr en0 (for Wi-Fi) and press Enter.
+      - It will output an IP like 192.168.1.5
+
+   Step 2: Update your API URL
+      - In folder models, access "api.ts" file
+      - Assign your IPv4 address to IP_ADDRESS variable
+      - Save it
+
+
+4. Download the Expo Go app from the App Store (iOS) or Google Play Store (Android).
+
+5. Make sure your phone and your computer are connected to the same Wi-Fi network.
+
+6. In your VS Code terminal, run:
 
    ```bash
    npx expo start
    ```
+
+7. Scan the QR code shown in the terminal with your phone (use the Camera app on iOS or the Expo Go app on Android).
+
+8. Test: Walk around your room or go outside. You should see the Acceleration numbers change when you shake the phone and the Speed/Location change when you walk.
+
+
 
 In the output, you'll find options to open the app in a
 
