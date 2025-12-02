@@ -205,7 +205,7 @@ export default function SettingScreen() {
               Cancel
             </Button>
             <Button
-              textColor={isFormValid && !isLoading ? "#1e90ff" : "#888"}
+              textColor={isFormValid && !isLoading ? "#1e90ff" : "#7f7f84ff"}
               onPress={handleChangePassword}
               // Disable button if form is invalid OR request is loading
               disabled={!isFormValid || isLoading}

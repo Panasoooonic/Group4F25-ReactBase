@@ -148,6 +148,15 @@ export default function SignUpScreen() {
         </Text>
       </TouchableOpacity>
 
+      {/* TAKE TO LOGIN SCREEN */}
+      <TouchableOpacity
+        style={[styles.buttonContainer]}
+        onPress={() => router.replace("/")}
+      >
+        <Text>Login</Text>
+      </TouchableOpacity>
+
+
       {/* TOAST NOTIFICATION */}
       {toastMessage && (
         <View
@@ -231,4 +240,6 @@ const styles = StyleSheet.create({
   toastError: {
     backgroundColor: "rgba(239, 68, 68, 0.95)", // red
   },
+
+
 });
