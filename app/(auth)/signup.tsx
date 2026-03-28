@@ -1,31 +1,112 @@
-import React from "react";
+import React, { useState } from "react";
 import {
-    Image,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
+import { API_URL } from "@/constants/api";
+import { useRouter } from "expo-router";
+
 export default function SignUpScreen() {
+  const router = useRouter();
+
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastColor, setToastColor] = useState<"success" | "error">("error");
+
+  const registerOnPress = async () => {
+    setToastMessage(null);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(API_URL + "/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: "http://localhost:8081",
+        },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email,
+          password,
+        }),
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (response.ok) {
+        // Success notification
+        setToastColor("success");
+        setToastMessage("Account created successfully!");
+
+        setTimeout(() => {
+          setToastMessage(null);
+          router.replace("/"); // back to login page
+        }, 1500);
+      } else {
+        // Error notification
+        setToastColor("error");
+        setToastMessage(data?.message || "Registration failed.");
+
+        setTimeout(() => {
+          setToastMessage(null);
+        }, 5000);
+      }
+    } catch (err) {
+      console.error("Register error:", err);
+
+      setToastColor("error");
+      setToastMessage("Unable to reach server. Please try again.");
+
+      setTimeout(() => {
+        setToastMessage(null);
+      }, 5000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
+      {/* FIRST NAME */}
       <View style={styles.inputContainer}>
         <Image
           style={[styles.icon, styles.inputIcon]}
-          source={{
-            uri: "https://img.icons8.com/ios-filled/512/circled-envelope.png",
-          }}
+          source={{ uri: "https://img.icons8.com/ios-filled/512/user.png" }}
         />
         <TextInput
           style={styles.inputs}
-          placeholder="Phone"
-          keyboardType="phone-pad"
-          underlineColorAndroid="transparent"
+          placeholder="First Name"
+          value={firstName}
+          onChangeText={setFirstName}
         />
       </View>
 
+      {/* LAST NAME */}
+      <View style={styles.inputContainer}>
+        <Image
+          style={[styles.icon, styles.inputIcon]}
+          source={{ uri: "https://img.icons8.com/ios-filled/512/user.png" }}
+        />
+        <TextInput
+          style={styles.inputs}
+          placeholder="Last Name"
+          value={lastName}
+          onChangeText={setLastName}
+        />
+      </View>
+
+      {/* EMAIL */}
       <View style={styles.inputContainer}>
         <Image
           style={[styles.icon, styles.inputIcon]}
@@ -37,10 +118,12 @@ export default function SignUpScreen() {
           style={styles.inputs}
           placeholder="Email"
           keyboardType="email-address"
-          underlineColorAndroid="transparent"
+          value={email}
+          onChangeText={setEmail}
         />
       </View>
 
+      {/* PASSWORD */}
       <View style={styles.inputContainer}>
         <Image
           style={[styles.icon, styles.inputIcon]}
@@ -49,14 +132,42 @@ export default function SignUpScreen() {
         <TextInput
           style={styles.inputs}
           placeholder="Password"
-          secureTextEntry={true}
-          underlineColorAndroid="transparent"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
         />
       </View>
 
-      <TouchableOpacity style={[styles.buttonContainer, styles.loginButton]}>
-        <Text style={styles.loginText}>Register</Text>
+      {/* REGISTER BUTTON */}
+      <TouchableOpacity
+        style={[styles.buttonContainer, styles.loginButton]}
+        onPress={registerOnPress}
+      >
+        <Text style={styles.loginText}>
+          {isLoading ? "Registering..." : "Register"}
+        </Text>
       </TouchableOpacity>
+
+      {/* TAKE TO LOGIN SCREEN */}
+      <TouchableOpacity
+        style={[styles.buttonContainer]}
+        onPress={() => router.replace("/")}
+      >
+        <Text>Login</Text>
+      </TouchableOpacity>
+
+
+      {/* TOAST NOTIFICATION */}
+      {toastMessage && (
+        <View
+          style={[
+            styles.toast,
+            toastColor === "success" ? styles.toastSuccess : styles.toastError,
+          ]}
+        >
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -82,7 +193,6 @@ const styles = StyleSheet.create({
   inputs: {
     height: 45,
     marginLeft: 16,
-    borderBottomColor: "#FFFFFF",
     flex: 1,
   },
   icon: {
@@ -105,27 +215,31 @@ const styles = StyleSheet.create({
   loginButton: {
     backgroundColor: "#3498db",
   },
-  fabookButton: {
-    backgroundColor: "#3b5998",
-  },
-  googleButton: {
-    backgroundColor: "#ff0000",
-  },
   loginText: {
     color: "white",
   },
-  restoreButtonContainer: {
-    width: 250,
-    marginBottom: 15,
-    alignItems: "flex-end",
+
+  /* Toast Notification */
+  toast: {
+    position: "absolute",
+    bottom: 24,
+    left: 16,
+    right: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
   },
-  socialButtonContent: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+  toastText: {
+    color: "#fff",
+    textAlign: "center",
+    fontSize: 14,
   },
-  socialIcon: {
-    color: "#FFFFFF",
-    marginRight: 5,
+  toastSuccess: {
+    backgroundColor: "rgba(16, 185, 129, 0.95)", // green
   },
+  toastError: {
+    backgroundColor: "rgba(239, 68, 68, 0.95)", // red
+  },
+
+
 });
